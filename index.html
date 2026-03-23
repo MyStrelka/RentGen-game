@@ -1,13 +1,497 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RentGen Runner</title>
+    <style>
+        :root {
+            --cyan: #00d4ff;
+            --cyan-glow: rgba(0, 212, 255, 0.5);
+            --red: #ff0055;
+            --red-glow: rgba(255, 0, 85, 0.5);
+        }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #02040a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-col: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 24px;
+            text-align: center;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .backdrop-blur {
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            z-index: 5;
+        }
+
+        @media (min-width: 768px) {
+            #hud { padding: 32px; }
+        }
+
+        .hud-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .label {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            color: var(--cyan);
+            opacity: 0.5;
+            font-family: monospace;
+            margin-bottom: 4px;
+        }
+
+        @media (min-width: 768px) {
+            .label { font-size: 10px; }
+        }
+
+        .value-large {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            line-height: 1;
+        }
+
+        @media (min-width: 768px) {
+            .value-large { font-size: 48px; }
+        }
+
+        .level-tag {
+            font-size: 10px;
+            font-weight: bold;
+            color: rgba(0, 212, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-left: 8px;
+        }
+
+        #shield-indicator {
+            margin-top: 12px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--cyan);
+            padding: 6px 12px;
+            border-radius: 8px;
+            color: var(--cyan);
+            font-size: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #shield-indicator.active {
+            display: flex;
+        }
+
+        .hud-right {
+            text-align: right;
+            pointer-events: auto;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Start Screen */
+        .title-group {
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 40px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            line-height: 1;
+        }
+
+        @media (min-width: 768px) {
+            h1 { font-size: 72px; }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 48px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .features-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .feature-card {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .feature-title {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 4px;
+        }
+
+        .feature-desc {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .btn-primary {
+            background: white;
+            color: black;
+            border: none;
+            padding: 20px 64px;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .btn-primary:hover {
+            background: var(--cyan);
+            transform: scale(1.05);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-border {
+            position: absolute;
+            inset: -4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+        }
+
+        .instructions {
+            margin-top: 64px;
+            display: flex;
+            gap: 32px;
+            color: rgba(255, 255, 255, 0.3);
+            font-family: monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .key-hint {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        kbd {
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        /* Game Over Screen */
+        #game-over-screen {
+            background: rgba(69, 0, 0, 0.9);
+        }
+
+        .severed-title {
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            color: #ff0055;
+            margin-bottom: 8px;
+        }
+
+        @media (min-width: 768px) {
+            .severed-title { font-size: 72px; }
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 64px;
+            margin-bottom: 64px;
+        }
+
+        .stat-item .label {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .stat-item .value {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: -0.05em;
+        }
+
+        #reroute-warning {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--cyan);
+            padding: 8px 24px;
+            border-radius: 999px;
+            color: var(--cyan);
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            display: none;
+            z-index: 20;
+        }
+
+        #level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            display: none;
+            z-index: 50;
+        }
+
+        .level-up-title {
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            color: var(--cyan);
+            text-shadow: 0 0 20px var(--cyan-glow);
+        }
+
+        @media (min-width: 768px) {
+            .level-up-title { font-size: 72px; }
+        }
+
+        .level-up-sub {
+            font-size: 10px;
+            font-family: monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.5em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-left">
+                <div class="hud-group">
+                    <span class="label">Packet Stream</span>
+                    <div style="display: flex; align-items: baseline;">
+                        <span id="score-val" class="value-large">0</span>
+                        <span id="level-val" class="level-tag">Lv.1</span>
+                    </div>
+                </div>
+                <div id="shield-indicator">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>RentGen VPN Active</span>
+                </div>
+            </div>
+            <div class="hud-right">
+                <div class="hud-group">
+                    <span class="label">Max Throughput</span>
+                    <span id="high-score-val" style="font-size: 20px; font-weight: bold;">0</span>
+                </div>
+                <div class="controls-row">
+                    <button id="mute-btn" class="icon-btn">
+                        <svg id="vol-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                        <svg id="vol-off" style="display: none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+                    </button>
+                    <button id="pause-btn" class="icon-btn">
+                        <div style="display: flex; gap: 3px;">
+                            <div style="width: 3px; height: 16px; background: white; border-radius: 2px;"></div>
+                            <div style="width: 3px; height: 16px; background: white; border-radius: 2px;"></div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reroute Warning -->
+        <div id="reroute-warning">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            Rerouting Protocol
+        </div>
+
+        <!-- Level Up -->
+        <div id="level-up">
+            <div class="level-up-title">Speed Boost</div>
+            <div class="level-up-sub">Bandwidth Increased</div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="overlay backdrop-blur active">
+            <div class="title-group">
+                <svg class="icon-cyan" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+                <h1>RentGen Runner</h1>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-title" style="color: var(--cyan);">RentGen VPN</div>
+                    <div class="feature-desc">Collect nodes for temporary protection</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-title" style="color: #ec4899;">Rerouting</div>
+                    <div class="feature-desc">Wires swap lanes dynamically</div>
+                </div>
+            </div>
+            <button id="start-game-btn" class="btn-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Start Game
+                <div class="btn-border"></div>
+            </button>
+            <div class="instructions">
+                <div class="key-hint">
+                    <div style="display: flex; gap: 4px;">
+                        <kbd>A</kbd><kbd>D</kbd>
+                    </div>
+                    <span>Navigate</span>
+                </div>
+                <div class="key-hint">
+                    <div style="padding: 4px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-style: italic;">Swipe or Tap</div>
+                    <span>Touch</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="pause-screen" class="overlay" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+            <div style="background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); padding: 48px; display: flex; flex-direction: column; align-items: center; gap: 32px;">
+                <div>
+                    <h2 style="font-size: 32px; font-weight: 900; font-style: italic; text-transform: uppercase;">Link Paused</h2>
+                    <p style="font-size: 10px; font-family: monospace; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.2em; margin-top: 8px;">Data Stream Suspended</p>
+                </div>
+                <button id="resume-btn" class="btn-primary" style="padding: 16px 48px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Resume Link
+                    <div class="btn-border"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay backdrop-blur">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff0055" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            <h2 class="severed-title">Link Severed</h2>
+            <p style="color: rgba(255, 0, 85, 0.6); font-family: monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 48px;">Connection Timeout • Packet Loss Detected</p>
+            
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="label">Throughput</div>
+                    <div id="final-score" class="value">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Peak Rate</div>
+                    <div id="final-high-score" class="value" style="color: var(--cyan);">0</div>
+                </div>
+            </div>
+
+            <button id="restart-btn" class="btn-primary" style="display: flex; align-items: center; justify-content: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                Reconnect
+                <div class="btn-border"></div>
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
