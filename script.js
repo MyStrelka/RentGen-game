@@ -317,6 +317,8 @@ const game = {
     touchStart: { x: 0, y: 0 },
     time: 0,
     level: 1,
+    lastTime: 0,
+    dt: 1,
     buildings: [],
     constellations: [],
     dust: [],
@@ -457,6 +459,7 @@ function resetGame() {
     game.flashTimer = 0;
     game.time = 0;
     game.level = 1;
+    game.lastTime = performance.now();
     game.wireLanes = [0, 1, 2, 3];
     game.targetWireLanes = [0, 1, 2, 3];
     game.rerouteProgress = 1;
@@ -487,38 +490,38 @@ function toggleMute() {
     volOff.style.display = isMuted ? 'block' : 'none';
 }
 
-function update() {
+function update(dt) {
     if (gameState !== 'PLAYING') return;
 
     const w = canvas.width;
     const h = canvas.height;
     
-    game.time += 0.02;
-    game.speed += SPEED_INCREMENT;
-    if (game.glitchTimer > 0) game.glitchTimer--;
-    if (game.flashTimer > 0) game.flashTimer--;
+    game.time += 0.02 * dt;
+    game.speed += SPEED_INCREMENT * dt;
+    if (game.glitchTimer > 0) game.glitchTimer -= dt;
+    if (game.flashTimer > 0) game.flashTimer -= dt;
     
     game.buildings.forEach(b => {
         const parallaxSpeed = b.layer === 0 ? 0.3 : 0.6;
-        b.y += game.speed * parallaxSpeed;
+        b.y += game.speed * parallaxSpeed * dt;
         if (b.y > h) Object.assign(b, createBuilding(b.layer));
     });
 
     game.dust = game.dust.filter(d => {
-        d.y += game.speed * (d.z || 0.5);
+        d.y += game.speed * (d.z || 0.5) * dt;
         return d.y <= h + 20;
     });
     while (game.dust.length < DUST_COUNT) game.dust.push(createDust());
 
     game.constellations.forEach(c => {
-        c.timer--;
+        c.timer -= dt;
         if (c.timer <= 0) {
             c.targetAlpha = c.targetAlpha === 0 ? 0.1 + Math.random() * 0.2 : 0;
             c.timer = 100 + Math.random() * 300;
         }
-        c.alpha += (c.targetAlpha - c.alpha) * 0.01;
+        c.alpha += (c.targetAlpha - c.alpha) * 0.01 * dt;
         c.nodes.forEach(n => {
-            n.x += n.vx; n.y += n.vy;
+            n.x += n.vx * dt; n.y += n.vy * dt;
             if (Math.abs(n.x) > 100) n.vx *= -1;
             if (Math.abs(n.y) > 100) n.vy *= -1;
         });
@@ -534,14 +537,14 @@ function update() {
     }
 
     if (game.rerouteProgress < 1.5) {
-        game.rerouteProgress += 0.006;
+        game.rerouteProgress += 0.006 * dt;
         if (game.rerouteProgress >= 1.5) {
             game.wireLanes = [...game.targetWireLanes];
             game.rerouteTimer = 600 + Math.random() * 300;
             isRerouting = false;
         }
     } else {
-        game.rerouteTimer--;
+        game.rerouteTimer -= dt;
         if (game.rerouteTimer <= 0) {
             game.rerouteProgress = 0;
             isRerouting = true;
@@ -557,26 +560,26 @@ function update() {
     const playerY_fixed = h - 150;
     const targetX = getWireX(game.playerWireIdx, playerY_fixed, w, game.time, h);
     if (game.playerVisualX === 0) game.playerVisualX = targetX;
-    game.playerVisualX += (targetX - game.playerVisualX) * 0.25;
+    game.playerVisualX += (targetX - game.playerVisualX) * 0.25 * dt;
 
     game.particles = game.particles.filter(p => {
-        p.y += p.speed + game.speed * 0.5;
+        p.y += (p.speed + game.speed * 0.5) * dt;
         return p.y <= h + 20;
     });
     while (game.particles.length < 50) game.particles.push(createParticle());
 
-    const dynamicSpawnRate = SPAWN_RATE + (game.level - 1) * 0.005;
+    const dynamicSpawnRate = (SPAWN_RATE + (game.level - 1) * 0.005) * dt;
     const spawnWaveT = Math.max(0, Math.min(1, game.rerouteProgress * 1.5 - (-50 / h) * 0.5));
     const isSpawnCrossing = Math.abs(spawnWaveT - 0.5) < 0.2;
 
     if (Math.random() < dynamicSpawnRate && !isSpawnCrossing) {
         game.objects.push({ id: game.nextId++, wireIdx: Math.floor(Math.random() * LANES), y: -50, type: 'virus', size: 25 + Math.random() * 15 });
-    } else if (Math.random() < POWERUP_RATE && !game.hasShield) {
+    } else if (Math.random() < (POWERUP_RATE * dt) && !game.hasShield) {
         game.objects.push({ id: game.nextId++, wireIdx: Math.floor(Math.random() * LANES), y: -50, type: 'shield', size: 30 });
     }
     
     game.objects = game.objects.filter(obj => {
-        obj.y += game.speed;
+        obj.y += game.speed * dt;
         const playerY = h - 150;
         const playerX = game.playerVisualX;
         const objX = getWireX(obj.wireIdx, obj.y, w, game.time, h);
@@ -614,7 +617,7 @@ function update() {
         return obj.y < h + 50;
     });
     
-    game.score += game.speed / 20;
+    game.score += (game.speed / 20) * dt;
     updateUI();
 }
 
@@ -790,9 +793,18 @@ function draw() {
     }
 }
 
-function loop() {
+function loop(timestamp) {
+    if (!game.lastTime) game.lastTime = timestamp;
+    const elapsed = timestamp - game.lastTime;
+    game.lastTime = timestamp;
+    
+    // Normalize dt to 60 FPS (16.67ms per frame)
+    const dt = elapsed / (1000 / 60);
+    // Limit dt to prevent huge jumps if tab was inactive
+    const limitedDt = Math.min(dt, 3);
+
     if (gameState === 'PLAYING') {
-        update();
+        update(limitedDt);
         draw();
     } else {
         // Still draw background and elements in START, PAUSED, GAMEOVER
@@ -878,4 +890,5 @@ window.addEventListener('resize', resize);
 // --- Init ---
 resize();
 updateUI();
+game.lastTime = performance.now();
 requestAnimationFrame(loop);
