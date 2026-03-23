@@ -21,12 +21,14 @@
         }
 
         body {
-            background-color: #02040a;
+            background-color: #000;
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
+            margin: 0;
+            padding: 0;
         }
 
         #game-container {
@@ -39,33 +41,10 @@
             display: block;
             width: 100%;
             height: 100%;
-        }
-
-        /* UI Overlays */
-        .overlay {
             position: absolute;
-            inset: 0;
-            display: flex;
-            flex-col: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            padding: 24px;
-            text-align: center;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            opacity: 0;
-            visibility: hidden;
-        }
-
-        .overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .backdrop-blur {
-            background-color: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
 
         /* HUD */
@@ -73,16 +52,24 @@
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            padding: 16px;
-            pointer-events: none;
+            width: 100%;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             z-index: 5;
+            pointer-events: none;
         }
 
-        @media (min-width: 768px) {
-            #hud { padding: 32px; }
+        .hud-left, .hud-right {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hud-right {
+            align-items: flex-end;
+            pointer-events: auto;
         }
 
         .hud-group {
@@ -91,74 +78,52 @@
         }
 
         .label {
-            font-size: 8px;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.3em;
-            color: var(--cyan);
-            opacity: 0.5;
+            letter-spacing: 2px;
+            color: #00FFFF;
+            opacity: 0.7;
             font-family: monospace;
-            margin-bottom: 4px;
-        }
-
-        @media (min-width: 768px) {
-            .label { font-size: 10px; }
         }
 
         .value-large {
-            font-size: 32px;
+            font-size: clamp(24px, 5vw, 48px);
             font-weight: 900;
-            letter-spacing: -0.05em;
             line-height: 1;
         }
 
-        @media (min-width: 768px) {
-            .value-large { font-size: 48px; }
-        }
-
         .level-tag {
-            font-size: 10px;
+            font-size: 12px;
+            color: #00FFFF;
+            margin-left: 10px;
+            opacity: 0.8;
             font-weight: bold;
-            color: rgba(0, 212, 255, 0.5);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-left: 8px;
         }
 
         #shield-indicator {
-            margin-top: 12px;
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid var(--cyan);
-            padding: 6px 12px;
-            border-radius: 8px;
-            color: var(--cyan);
-            font-size: 8px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            display: none;
+            display: flex;
             align-items: center;
             gap: 8px;
-        }
-
-        #shield-indicator.active {
-            display: flex;
-        }
-
-        .hud-right {
-            text-align: right;
-            pointer-events: auto;
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #00FFFF;
+            background: rgba(0, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .controls-row {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
-            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 5px;
         }
 
         .icon-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
             width: 40px;
             height: 40px;
@@ -167,151 +132,186 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
         .icon-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
 
-        /* Start Screen */
-        .title-group {
-            margin-bottom: 32px;
-        }
-
-        h1 {
-            font-size: 40px;
-            font-weight: 900;
-            font-style: italic;
-            text-transform: uppercase;
-            letter-spacing: -0.05em;
-            line-height: 1;
-        }
-
-        @media (min-width: 768px) {
-            h1 { font-size: 72px; }
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-            margin-bottom: 48px;
+        /* UI Overlays */
+        #menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 400px;
+            height: 100%;
+            z-index: 10;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
-        @media (min-width: 768px) {
-            .features-grid { grid-template-columns: 1fr 1fr; }
+        #menu-overlay.active {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
         }
 
-        .feature-card {
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .overlay {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            max-width: 600px;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        .overlay.active {
+            display: flex;
+        }
+
+        /* Logo and Icons */
+        .logo {
+            font-size: clamp(32px, 10vw, 64px);
+            font-weight: 900;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px #00FFFF;
+            margin: 0;
+            line-height: 1;
             text-align: center;
         }
 
-        .feature-title {
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            margin-bottom: 4px;
+        .chip-icon {
+            color: #00FFFF;
+            filter: drop-shadow(0 0 10px #00FFFF);
         }
 
-        .feature-desc {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
+        .logo-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
         }
 
+        /* Buttons */
         .btn-primary {
             background: white;
             color: black;
             border: none;
-            padding: 20px 64px;
-            font-size: 16px;
-            font-weight: bold;
+            padding: 20px 60px;
+            font-size: clamp(18px, 4vw, 24px);
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.2em;
             cursor: pointer;
             transition: all 0.2s;
-            position: relative;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            letter-spacing: 2px;
         }
 
         .btn-primary:hover {
-            background: var(--cyan);
+            background: #00FFFF;
             transform: scale(1.05);
+            box-shadow: 0 0 30px #00FFFF;
         }
 
         .btn-primary:active {
             transform: scale(0.95);
         }
 
-        .btn-border {
-            position: absolute;
-            inset: -4px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            pointer-events: none;
-        }
-
-        .instructions {
-            margin-top: 64px;
+        /* Info Boxes */
+        .info-row {
             display: flex;
-            gap: 32px;
-            color: rgba(255, 255, 255, 0.3);
-            font-family: monospace;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
+            flex-direction: row;
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+            max-width: 540px;
         }
 
-        .key-hint {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center;
+        .info-box {
+            border: 2px solid;
+            padding: 20px;
+            flex: 1;
+            min-width: 200px;
+            max-width: 260px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.03);
+            transition: transform 0.3s;
         }
 
-        kbd {
-            padding: 4px 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+        .info-box:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.07);
         }
 
-        /* Game Over Screen */
-        #game-over-screen {
-            background: rgba(69, 0, 0, 0.9);
+        .info-box.vpn {
+            border-color: #00FFFF;
+            color: #00FFFF;
+            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.1);
         }
 
-        .severed-title {
-            font-size: 48px;
+        .info-box.rerouting {
+            border-color: #FF00FF;
+            color: #FF00FF;
+            box-shadow: inset 0 0 10px rgba(255, 0, 255, 0.1);
+        }
+
+        .info-title {
+            font-size: 14px;
             font-weight: 900;
-            font-style: italic;
             text-transform: uppercase;
-            color: #ff0055;
             margin-bottom: 8px;
+            letter-spacing: 1px;
         }
 
-        @media (min-width: 768px) {
-            .severed-title { font-size: 72px; }
+        .info-desc {
+            font-size: 12px;
+            opacity: 0.7;
+            line-height: 1.4;
         }
 
-        .stats-row {
-            display: flex;
-            gap: 64px;
-            margin-bottom: 64px;
+        /* Controls Hint */
+        .controls-hint {
+            opacity: 0.5;
+            font-size: 11px;
+            text-transform: uppercase;
+            text-align: center;
+            pointer-events: none;
+            font-family: monospace;
+            letter-spacing: 1px;
+            line-height: 1.6;
+            margin-top: 10px;
         }
 
-        .stat-item .label {
-            color: rgba(255, 255, 255, 0.4);
+        /* Game Over Specific */
+        .game-over-title {
+            font-size: clamp(40px, 12vw, 80px);
+            font-weight: 900;
+            color: #ff0055;
+            text-transform: uppercase;
+            text-shadow: 0 0 30px rgba(255, 0, 85, 0.6);
+            margin: 0;
+            text-align: center;
         }
 
-        .stat-item .value {
-            font-size: 48px;
-            font-weight: bold;
-            letter-spacing: -0.05em;
+        .final-stats {
+            font-size: clamp(18px, 4vw, 24px);
+            opacity: 0.9;
+            margin-bottom: 10px;
+            line-height: 1.6;
+            font-family: monospace;
         }
 
         #reroute-warning {
@@ -417,78 +417,49 @@
             <div class="level-up-sub">Bandwidth Increased</div>
         </div>
 
-        <!-- Start Screen -->
-        <div id="start-screen" class="overlay backdrop-blur active">
-            <div class="title-group">
-                <svg class="icon-cyan" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
-                <h1>RentGen Runner</h1>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-title" style="color: var(--cyan);">RentGen VPN</div>
-                    <div class="feature-desc">Collect nodes for temporary protection</div>
+        <!-- Menu Overlay -->
+        <div id="menu-overlay" class="active">
+            <!-- Start Screen -->
+            <div id="start-screen" class="overlay active">
+                <div class="logo-group">
+                    <svg class="chip-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+                    <h1 class="logo">RentGen Runner</h1>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-title" style="color: #ec4899;">Rerouting</div>
-                    <div class="feature-desc">Wires swap lanes dynamically</div>
-                </div>
-            </div>
-            <button id="start-game-btn" class="btn-primary">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                Start Game
-                <div class="btn-border"></div>
-            </button>
-            <div class="instructions">
-                <div class="key-hint">
-                    <div style="display: flex; gap: 4px;">
-                        <kbd>A</kbd><kbd>D</kbd>
+
+                <div class="info-row">
+                    <div class="info-box vpn">
+                        <div class="info-title">RentGen VPN</div>
+                        <div class="info-desc">Collect nodes for temporary protection</div>
                     </div>
-                    <span>Navigate</span>
+                    <div class="info-box rerouting">
+                        <div class="info-title">Rerouting</div>
+                        <div class="info-desc">Wires swap lanes dynamically</div>
+                    </div>
                 </div>
-                <div class="key-hint">
-                    <div style="padding: 4px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-style: italic;">Swipe or Tap</div>
-                    <span>Touch</span>
-                </div>
-            </div>
-        </div>
+                
+                <button id="start-game-btn" class="btn-primary">Start Game</button>
 
-        <!-- Pause Screen -->
-        <div id="pause-screen" class="overlay" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
-            <div style="background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); padding: 48px; display: flex; flex-direction: column; align-items: center; gap: 32px;">
-                <div>
-                    <h2 style="font-size: 32px; font-weight: 900; font-style: italic; text-transform: uppercase;">Link Paused</h2>
-                    <p style="font-size: 10px; font-family: monospace; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.2em; margin-top: 8px;">Data Stream Suspended</p>
-                </div>
-                <button id="resume-btn" class="btn-primary" style="padding: 16px 48px; display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    Resume Link
-                    <div class="btn-border"></div>
-                </button>
-            </div>
-        </div>
-
-        <!-- Game Over Screen -->
-        <div id="game-over-screen" class="overlay backdrop-blur">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff0055" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-            <h2 class="severed-title">Link Severed</h2>
-            <p style="color: rgba(255, 0, 85, 0.6); font-family: monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 48px;">Connection Timeout • Packet Loss Detected</p>
-            
-            <div class="stats-row">
-                <div class="stat-item">
-                    <div class="label">Throughput</div>
-                    <div id="final-score" class="value">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="label">Peak Rate</div>
-                    <div id="final-high-score" class="value" style="color: var(--cyan);">0</div>
+                <div class="controls-hint">
+                    [A][D] Navigate<br>
+                    [Swipe/Tap] Touch Controls
                 </div>
             </div>
 
-            <button id="restart-btn" class="btn-primary" style="display: flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                Reconnect
-                <div class="btn-border"></div>
-            </button>
+            <!-- Pause Screen -->
+            <div id="pause-screen" class="overlay">
+                <h2 class="logo" style="font-size: 32px;">Paused</h2>
+                <button id="resume-btn" class="btn-primary">Resume</button>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="game-over-screen" class="overlay">
+                <h2 class="game-over-title">Game Over</h2>
+                <div class="final-stats">
+                    Throughput: <span id="final-score">0</span><br>
+                    Peak Rate: <span id="final-high-score">0</span>
+                </div>
+                <button id="restart-btn" class="btn-primary">Retry</button>
+            </div>
         </div>
     </div>
 

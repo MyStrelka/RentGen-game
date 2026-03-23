@@ -338,6 +338,7 @@ const levelUpEl = document.getElementById('level-up');
 const startScreen = document.getElementById('start-screen');
 const pauseScreen = document.getElementById('pause-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
+const menuOverlay = document.getElementById('menu-overlay');
 const finalScore = document.getElementById('final-score');
 const finalHighScore = document.getElementById('final-high-score');
 const muteBtn = document.getElementById('mute-btn');
@@ -413,20 +414,28 @@ function updateUI() {
     rerouteWarning.style.display = isRerouting ? 'block' : 'none';
     levelUpEl.style.display = showLevelUp ? 'block' : 'none';
 
-    if (gameState === 'START') {
-        startScreen.classList.add('active');
-        pauseScreen.classList.remove('active');
-        gameOverScreen.classList.remove('active');
-    } else if (gameState === 'PLAYING') {
+    if (gameState === 'PLAYING') {
+        menuOverlay.classList.remove('active');
         startScreen.classList.remove('active');
         pauseScreen.classList.remove('active');
         gameOverScreen.classList.remove('active');
-    } else if (gameState === 'PAUSED') {
-        pauseScreen.classList.add('active');
-    } else if (gameState === 'GAMEOVER') {
-        gameOverScreen.classList.add('active');
-        finalScore.textContent = Math.floor(game.score);
-        finalHighScore.textContent = highScore;
+    } else {
+        menuOverlay.classList.add('active');
+        if (gameState === 'START') {
+            startScreen.classList.add('active');
+            pauseScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+        } else if (gameState === 'PAUSED') {
+            startScreen.classList.remove('active');
+            pauseScreen.classList.add('active');
+            gameOverScreen.classList.remove('active');
+        } else if (gameState === 'GAMEOVER') {
+            startScreen.classList.remove('active');
+            pauseScreen.classList.remove('active');
+            gameOverScreen.classList.add('active');
+            finalScore.textContent = Math.floor(game.score);
+            finalHighScore.textContent = highScore;
+        }
     }
 }
 
