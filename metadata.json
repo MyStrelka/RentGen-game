@@ -1,0 +1,5 @@
+{
+  "name": "RentGen Runner",
+  "description": "A high-speed network runner where you navigate twisted pair cables as a data packet. Dodge viruses and collect VPN nodes to survive.",
+  "requestFramePermissions": []
+}
