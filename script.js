@@ -544,14 +544,40 @@ async function saveGlobalScore(finalScore) {
     }
 
     try {
-        console.log("🔄 Pushing to /leaderboard...");
-        await database.ref('leaderboard').push({
-            name: playerName,
-            score: Math.floor(finalScore),
-            uid: playerUid,
-            timestamp: (firebase && firebase.database) ? firebase.database.ServerValue.TIMESTAMP : Date.now()
+        console.log("🔄 Fetching existing leaderboard entries...");
+        const snapshot = await database.ref('leaderboard').once('value');
+        let existingEntryKey = null;
+        let existingBestScore = 0;
+
+        snapshot.forEach(childSnapshot => {
+            const entry = childSnapshot.val();
+            if (entry && entry.uid === playerUid) {
+                existingEntryKey = childSnapshot.key;
+                existingBestScore = entry.score;
+            }
         });
-        console.log("✓ Score saved successfully!");
+
+        if (existingEntryKey !== null) {
+            if (finalScore > existingBestScore) {
+                console.log(`🔄 Updating existing record: ${existingBestScore} → ${Math.floor(finalScore)}`);
+                await database.ref(`leaderboard/${existingEntryKey}`).update({
+                    score: Math.floor(finalScore),
+                    timestamp: (firebase && firebase.database) ? firebase.database.ServerValue.TIMESTAMP : Date.now()
+                });
+                console.log("✓ Score updated successfully!");
+            } else {
+                console.log(`ℹ️ Score ${Math.floor(finalScore)} not better than existing ${existingBestScore}, skipping update`);
+            }
+        } else {
+            console.log("🔄 Creating new leaderboard entry...");
+            await database.ref('leaderboard').push({
+                name: playerName,
+                score: Math.floor(finalScore),
+                uid: playerUid,
+                timestamp: (firebase && firebase.database) ? firebase.database.ServerValue.TIMESTAMP : Date.now()
+            });
+            console.log("✓ New entry created successfully!");
+        }
     } catch (error) {
         console.error("❌ Error saving score:", error);
         console.error("Error code:", error.code);
