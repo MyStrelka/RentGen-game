@@ -49,7 +49,8 @@ if (tg) {
     tg.ready();
 }
 const playerName = tg?.initDataUnsafe?.user?.first_name || tg?.initDataUnsafe?.user?.username || "ANON_PACKET";
-const playerUid = tg?.initDataUnsafe?.user?.id?.toString() || "ANON_" + Math.floor(Math.random() * 1000000);
+const playerUid = tg?.initDataUnsafe?.user?.id?.toString() || null;
+const isAnonymous = !playerUid;
 
 // --- Audio Engine ---
 class SynthEngine {
@@ -535,6 +536,14 @@ async function saveGlobalScore(finalScore) {
 
     if (finalScore <= 0) {
         console.warn("Score is 0 or negative, skipping save");
+        return;
+    }
+
+    if (isAnonymous) {
+        console.log("ℹ️ Anonymous player - not saving score, showing prompt");
+        if (tg && tg.showAlert) {
+            tg.showAlert("Для записи вашего рекорда перейдите в @RentGenGame_bot");
+        }
         return;
     }
 
