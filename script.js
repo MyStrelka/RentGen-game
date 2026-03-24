@@ -13,21 +13,35 @@ const firebaseConfig = {
   appId: "__FIREBASE_APP_ID__"
 };
 
+// --- Diagnostic logging ---
+console.log("🔍 Firebase Config Check:");
+console.log("apiKey:", firebaseConfig.apiKey.substring(0, 10) + "...");
+console.log("authDomain:", firebaseConfig.authDomain);
+console.log("databaseURL:", firebaseConfig.databaseURL);
+console.log("projectId:", firebaseConfig.projectId);
+
+const isConfigValid = !firebaseConfig.databaseURL.includes("__FIREBASE");
+console.log("✓ Config is valid?", isConfigValid);
+
 // Initialize Firebase (Compat)
+let database = null;
 try {
     if (typeof firebase !== 'undefined') {
         if (!firebaseConfig.databaseURL || firebaseConfig.databaseURL.includes("__FIREBASE") || firebaseConfig.databaseURL.trim() === "") {
+            console.error("⚠️ Firebase config contains placeholders - Secrets were NOT injected!");
+            console.error("This means GitHub Actions didn't replace the tokens properly.");
             // Fallback for local development to prevent crash
             firebaseConfig.databaseURL = "https://your-firebase-project.firebaseio.com";
         }
         firebase.initializeApp(firebaseConfig);
+        database = firebase.database();
+        console.log("✓ Firebase initialized successfully");
     } else {
         console.warn("Firebase SDK not loaded");
     }
 } catch (error) {
     console.error("Firebase initialization error:", error);
 }
-const database = (typeof firebase !== 'undefined' && firebase.database) ? firebase.database() : null;
 
 // Telegram WebApp
 const tg = window.Telegram?.WebApp;
@@ -462,45 +476,98 @@ function getWireX(wireIdx, y, w, time, h) {
 
 // --- UI Management ---
 async function loadLeaderboard() {
+    console.log("📊 loadLeaderboard() called");
+    
     if (!database) {
-        console.warn("Database not initialized");
+        console.error("❌ Database is NULL - Firebase not initialized properly");
+        console.error("firebaseConfig:", {
+            apiKey: firebaseConfig.apiKey.substring(0, 5) + "...",
+            databaseURL: firebaseConfig.databaseURL
+        });
         return [];
     }
+    
+    console.log("✓ Database reference exists:", database);
+    
     try {
+        console.log("🔄 Fetching from /leaderboard...");
         const snapshot = await database.ref('leaderboard').once('value');
+        
+        console.log("✓ Got snapshot:", snapshot);
+        console.log("✓ Snapshot exists:", snapshot.exists());
+        
         const leaderboardData = [];
         snapshot.forEach(childSnapshot => {
             const entry = childSnapshot.val();
             if (entry && typeof entry.score === 'number') {
                 leaderboardData.push(entry);
+                console.log("✓ Added entry:", entry.name, entry.score);
             }
         });
+        
+        console.log("✓ Total entries fetched:", leaderboardData.length);
+        
         // Sort by score descending (highest first)
         leaderboardData.sort((a, b) => b.score - a.score);
-        // Return top 10
-        return leaderboardData.slice(0, 10);
+        
+        const result = leaderboardData.slice(0, 10);
+        console.log("✓ Returning top 10:", result.length);
+        
+        return result;
     } catch (error) {
-        console.error("Error fetching leaderboard:", error);
+        console.error("❌ Error fetching leaderboard:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        console.error("Full error:", error);
+        
+        // Log which exact path failed
+        if (error.code === 'PERMISSION_DENIED') {
+            console.error("🔐 PERMISSION DENIED - Check Firebase Rules:");
+            console.error("   Expected rule: .read: true");
+            console.error("   At path: /leaderboard");
+        }
+        
         return [];
     }
 }
 
 async function saveGlobalScore(finalScore) {
-    if (finalScore <= 0 || !database) return;
+    console.log("💾 saveGlobalScore() called with score:", finalScore);
+    
+    if (finalScore <= 0) {
+        console.warn("Score is 0 or negative, skipping save");
+        return;
+    }
+    
+    if (!database) {
+        console.error("❌ Database is NULL - cannot save score");
+        return;
+    }
+    
     try {
+        console.log("🔄 Pushing to /leaderboard...");
         await database.ref('leaderboard').push({
             name: playerName,
             score: Math.floor(finalScore),
             uid: playerUid,
             timestamp: (firebase && firebase.database) ? firebase.database.ServerValue.TIMESTAMP : Date.now()
         });
-        console.log("Score saved successfully!");
+        console.log("✓ Score saved successfully!");
     } catch (error) {
-        console.error("Error saving score:", error);
+        console.error("❌ Error saving score:", error);
+        console.error("Error code:", error.code);
+        
+        if (error.code === 'PERMISSION_DENIED') {
+            console.error("🔐 PERMISSION DENIED when writing - Check Firebase Rules:");
+            console.error("   Expected rule: .write: true or custom validation");
+            console.error("   At path: /leaderboard");
+        }
     }
 }
 
 async function populateLeaderboard(container, limit = 10) {
+    console.log("📋 populateLeaderboard() called");
+    
     container.innerHTML = `
         <div class="leaderboard-row header">
             <span class="rank">#</span>
@@ -510,7 +577,10 @@ async function populateLeaderboard(container, limit = 10) {
         <div style="padding: 10px; opacity: 0.5; font-size: 12px;">Syncing with network...</div>
     `;
     
+    console.log("⏳ Calling loadLeaderboard()...");
     const data = await loadLeaderboard();
+    
+    console.log("📊 populateLeaderboard got data:", data.length, "entries");
     
     container.innerHTML = `
         <div class="leaderboard-row header">
@@ -521,6 +591,7 @@ async function populateLeaderboard(container, limit = 10) {
     `;
 
     if (data.length === 0) {
+        console.warn("⚠️ No leaderboard data available");
         container.innerHTML += `<div style="padding: 10px; opacity: 0.5; font-size: 12px;">No data found.</div>`;
     }
 
