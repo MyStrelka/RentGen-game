@@ -1,0 +1,14 @@
+{
+  "name": "rentgen-runner",
+  "version": "1.0.0",
+  "description": "A high-speed network runner where you navigate twisted pair cables as a data packet.",
+  "scripts": {
+    "dev": "npx -y http-server -p 3000",
+    "start": "npx -y http-server -p 3000",
+    "build": "echo 'No build step needed for Vanilla JS'",
+    "lint": "echo 'No linting configured for Vanilla JS'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
