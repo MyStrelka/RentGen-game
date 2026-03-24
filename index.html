@@ -10,6 +10,17 @@
     <!-- Firebase Compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script id="firebase-config-inline">
+      window.firebaseConfig = window.firebaseConfig || {
+        apiKey: "__FIREBASE_API_KEY__",
+        authDomain: "__FIREBASE_AUTH_DOMAIN__",
+        databaseURL: "__FIREBASE_DATABASE_URL__",
+        projectId: "__FIREBASE_PROJECT_ID__",
+        storageBucket: "__FIREBASE_STORAGE_BUCKET__",
+        messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
+        appId: "__FIREBASE_APP_ID__"
+      };
+    </script>
     <style>
         :root {
             --cyan: #00d4ff;
@@ -563,7 +574,6 @@
         </div>
     </div>
 
-    <script src="firebase-config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
