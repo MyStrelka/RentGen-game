@@ -457,6 +457,64 @@
             color: rgba(255, 255, 255, 0.5);
             margin-top: 8px;
         }
+
+        /* Anonymous Alert Modal */
+        #anon-alert-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #anon-alert-modal.active {
+            display: flex;
+        }
+
+        .anon-alert-box {
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f3a 100%);
+            border: 2px solid var(--cyan);
+            box-shadow: 0 0 30px var(--cyan-glow);
+            padding: 30px 20px;
+            max-width: 320px;
+            text-align: center;
+            border-radius: 12px;
+        }
+
+        .anon-alert-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .anon-alert-message {
+            font-size: 16px;
+            color: white;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .anon-alert-btn {
+            background: var(--cyan);
+            color: black;
+            border: none;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .anon-alert-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px var(--cyan-glow);
+        }
     </style>
 </head>
 <body>
@@ -570,6 +628,15 @@
                     <button id="restart-btn" class="btn-ui btn-primary">Retry</button>
                     <button id="main-menu-btn" class="btn-ui btn-secondary">Main Menu</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Anonymous Alert Modal -->
+        <div id="anon-alert-modal">
+            <div class="anon-alert-box">
+                <div class="anon-alert-icon">💡</div>
+                <div class="anon-alert-message">Для записи вашего рекорда перейдите в <b>@RentGenGame_bot</b></div>
+                <button id="anon-alert-close-btn" class="anon-alert-btn">Понятно</button>
             </div>
         </div>
     </div>

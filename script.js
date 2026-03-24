@@ -402,6 +402,8 @@ const finalHighScore = document.getElementById('final-high-score');
 const muteBtn = document.getElementById('mute-btn');
 const volOn = document.getElementById('vol-on');
 const volOff = document.getElementById('vol-off');
+const anonAlertModal = document.getElementById('anon-alert-modal');
+const anonAlertCloseBtn = document.getElementById('anon-alert-close-btn');
 
 // --- Global Error Handling ---
 window.onerror = function(message, source, lineno, colno, error) {
@@ -541,8 +543,9 @@ async function saveGlobalScore(finalScore) {
 
     if (isAnonymous) {
         console.log("ℹ️ Anonymous player - not saving score, showing prompt");
-        if (tg && tg.showAlert) {
-            tg.showAlert("Для записи вашего рекорда перейдите в @RentGenGame_bot");
+        // Show custom modal alert
+        if (anonAlertModal) {
+            anonAlertModal.classList.add('active');
         }
         return;
     }
@@ -1159,6 +1162,13 @@ document.getElementById('main-menu-btn').addEventListener('click', () => {
     updateUI();
 });
 document.getElementById('music-btn').addEventListener('click', toggleMusic);
+
+// Anonymous alert close button
+if (anonAlertCloseBtn) {
+    anonAlertCloseBtn.addEventListener('click', () => {
+        anonAlertModal.classList.remove('active');
+    });
+}
 
 window.addEventListener('resize', resize);
 
