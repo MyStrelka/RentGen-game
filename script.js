@@ -14,8 +14,20 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase (Compat)
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+try {
+    if (typeof firebase !== 'undefined') {
+        if (!firebaseConfig.databaseURL || firebaseConfig.databaseURL.includes("__FIREBASE") || firebaseConfig.databaseURL.trim() === "") {
+            // Fallback for local development to prevent crash
+            firebaseConfig.databaseURL = "https://your-firebase-project.firebaseio.com";
+        }
+        firebase.initializeApp(firebaseConfig);
+    } else {
+        console.warn("Firebase SDK not loaded");
+    }
+} catch (error) {
+    console.error("Firebase initialization error:", error);
+}
+const database = (typeof firebase !== 'undefined' && firebase.database) ? firebase.database() : null;
 
 // Telegram WebApp
 const tg = window.Telegram?.WebApp;
@@ -450,6 +462,10 @@ function getWireX(wireIdx, y, w, time, h) {
 
 // --- UI Management ---
 async function loadLeaderboard() {
+    if (!database) {
+        console.warn("Database not initialized");
+        return [];
+    }
     try {
         const snapshot = await database.ref('leaderboard').orderByChild('score').limitToLast(10).once('value');
         const leaderboardData = [];
@@ -465,13 +481,13 @@ async function loadLeaderboard() {
 }
 
 async function saveGlobalScore(finalScore) {
-    if (finalScore <= 0) return;
+    if (finalScore <= 0 || !database) return;
     try {
         await database.ref('leaderboard').push({
             name: playerName,
             score: Math.floor(finalScore),
             uid: playerUid,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: (firebase && firebase.database) ? firebase.database.ServerValue.TIMESTAMP : Date.now()
         });
         console.log("Score saved successfully!");
     } catch (error) {
