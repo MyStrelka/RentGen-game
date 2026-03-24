@@ -33,7 +33,7 @@ jobs:
           sed -i "s|__FIREBASE_APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" index.html
           echo "🔍 Verify placeholders are removed"
           if grep -q "__FIREBASE_API_KEY__" index.html; then
-            echo "❌ Index still contains placeholder__FIREBASE_API_KEY__"
+            echo "❌ Index still contains placeholder __FIREBASE_API_KEY__"
             exit 1
           fi
           if grep -q "__FIREBASE_DATABASE_URL__" index.html; then
@@ -41,6 +41,8 @@ jobs:
             exit 1
           fi
           echo "✅ index.html secrets injected"
+          echo "🔍 index.html snippet after injection:"
+          sed -n '1,40p' index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
