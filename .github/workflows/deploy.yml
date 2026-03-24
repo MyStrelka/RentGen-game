@@ -20,13 +20,14 @@ jobs:
       - name: Inject Firebase secrets into index.html and script.js
         run: |
           echo "🔐 Inject firebase config into index.html and script.js"
-          REQUIRED=(FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_DATABASE_URL FIREBASE_PROJECT_ID FIREBASE_STORAGE_BUCKET FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID)
-          for key in "${REQUIRED[@]}"; do
-            if [ -z "${{ secrets[$key] }}" ]; then
-              echo "❌ Secret $key is missing"
-              exit 1
-            fi
-          done
+
+          if [ -z "${{ secrets.FIREBASE_API_KEY }}" ]; then echo "❌ FIREBASE_API_KEY missing"; exit 1; fi
+          if [ -z "${{ secrets.FIREBASE_AUTH_DOMAIN }}" ]; then echo "❌ FIREBASE_AUTH_DOMAIN missing"; exit 1; fi
+          if [ -z "${{ secrets.FIREBASE_DATABASE_URL }}" ]; then echo "❌ FIREBASE_DATABASE_URL missing"; exit 1; fi
+          if [ -z "${{ secrets.FIREBASE_PROJECT_ID }}" ]; then echo "❌ FIREBASE_PROJECT_ID missing"; exit 1; fi
+          if [ -z "${{ secrets.FIREBASE_STORAGE_BUCKET }}" ]; then echo "❌ FIREBASE_STORAGE_BUCKET missing"; exit 1; fi
+          if [ -z "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}" ]; then echo "❌ FIREBASE_MESSAGING_SENDER_ID missing"; exit 1; fi
+          if [ -z "${{ secrets.FIREBASE_APP_ID }}" ]; then echo "❌ FIREBASE_APP_ID missing"; exit 1; fi
 
           for file in index.html script.js; do
             sed -i "s|__FIREBASE_API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" "$file"
