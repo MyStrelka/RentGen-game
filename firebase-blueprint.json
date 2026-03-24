@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "leaderboard": {
+      "title": "Leaderboard",
+      "description": "Stores player scores and Telegram user info.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Telegram user's display name."
+        },
+        "score": {
+          "type": "integer",
+          "description": "The player's throughput score."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the score was recorded."
+        },
+        "uid": {
+          "type": "string",
+          "description": "Telegram user ID or anonymous ID."
+        }
+      },
+      "required": ["name", "score", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/leaderboard/{scoreId}": {
+      "schema": "leaderboard",
+      "description": "Collection of high scores."
+    }
+  }
+}

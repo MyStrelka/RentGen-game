@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RentGen Runner</title>
+    <!-- Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root {
             --cyan: #00d4ff;
@@ -148,7 +154,7 @@
             width: 100%;
             height: 100%;
             z-index: 10;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(0, 0, 0, 0.95);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -170,11 +176,12 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 30px;
             width: 100%;
-            max-width: 600px;
-            padding: 40px;
+            height: 100%;
+            max-width: 500px;
+            padding: 40px 20px;
             box-sizing: border-box;
+            text-align: center;
         }
 
         .overlay.active {
@@ -183,127 +190,202 @@
 
         /* Logo and Icons */
         .logo {
-            font-size: clamp(32px, 10vw, 64px);
+            font-size: clamp(32px, 8vw, 54px);
             font-weight: 900;
             text-transform: uppercase;
-            text-shadow: 0 0 15px #00FFFF;
+            text-shadow: 0 0 15px var(--cyan-glow);
             margin: 0;
             line-height: 1;
-            text-align: center;
+            color: white;
         }
 
         .chip-icon {
-            color: #00FFFF;
-            filter: drop-shadow(0 0 10px #00FFFF);
+            color: var(--cyan);
+            filter: drop-shadow(0 0 10px var(--cyan));
+            margin-bottom: 10px;
         }
 
         .logo-group {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
+            gap: 10px;
+            margin-bottom: 30px;
+            margin-top: auto;
         }
 
         /* Buttons */
-        .btn-primary {
-            background: white;
-            color: black;
-            border: none;
-            padding: 20px 60px;
-            font-size: clamp(18px, 4vw, 24px);
-            font-weight: 900;
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            align-items: center;
+            margin-bottom: auto;
+        }
+
+        .btn-ui {
             text-transform: uppercase;
+            font-weight: 900;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
             letter-spacing: 2px;
+            border: none;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .btn-primary {
+            background: var(--cyan);
+            color: black;
+            padding: 20px 0;
+            width: 100%;
+            max-width: 320px;
+            font-size: 24px;
+            box-shadow: 0 0 20px var(--cyan-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 14px 0;
+            width: 100%;
+            max-width: 260px;
+            font-size: 16px;
+        }
+
+        .btn-accent {
+            background: transparent;
+            color: #FF00FF;
+            border: 1px solid #FF00FF;
+            padding: 12px 0;
+            width: 100%;
+            max-width: 220px;
+            font-size: 14px;
+        }
+
+        .btn-ui:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
         }
 
         .btn-primary:hover {
-            background: #00FFFF;
-            transform: scale(1.05);
-            box-shadow: 0 0 30px #00FFFF;
+            box-shadow: 0 0 30px var(--cyan);
         }
 
-        .btn-primary:active {
-            transform: scale(0.95);
+        /* Leaderboard Table */
+        .leaderboard-container {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+
+        .leaderboard-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        .rank { width: 30px; text-align: left; color: rgba(255, 255, 255, 0.5); }
+        .name { flex: 1; text-align: left; padding-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .score { width: 80px; text-align: right; color: var(--cyan); }
+
+        .leaderboard-row.header {
+            color: var(--cyan);
+            font-weight: bold;
+            border-bottom: 1px solid var(--cyan);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        .leaderboard-row.header .score { color: var(--cyan); }
+
+        .your-best {
+            margin-top: 15px;
+            color: #FF00FF;
+            font-weight: bold;
+            font-size: 16px;
+            text-transform: uppercase;
+            padding-left: 20px;
+            align-self: flex-start;
         }
 
         /* Info Boxes */
         .info-row {
             display: flex;
             flex-direction: row;
-            gap: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
             justify-content: center;
             width: 100%;
-            max-width: 540px;
+            margin-top: auto;
+            padding-bottom: 20px;
         }
 
         .info-box {
-            border: 2px solid;
-            padding: 20px;
+            border: 1px solid;
+            padding: 10px;
             flex: 1;
-            min-width: 200px;
-            max-width: 260px;
+            min-width: 140px;
+            max-width: 200px;
             text-align: center;
             background: rgba(255, 255, 255, 0.03);
-            transition: transform 0.3s;
         }
 
-        .info-box:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.07);
+        @media (max-width: 480px) {
+            .info-row {
+                flex-direction: row;
+                gap: 8px;
+                padding-bottom: 20px;
+            }
+            .info-box {
+                min-width: 100px;
+                padding: 6px;
+                flex: 1 1 40%;
+            }
+            .info-title { font-size: 11px; }
+            .info-desc { font-size: 9px; }
         }
 
-        .info-box.vpn {
-            border-color: #00FFFF;
-            color: #00FFFF;
-            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.1);
-        }
-
-        .info-box.rerouting {
-            border-color: #FF00FF;
-            color: #FF00FF;
-            box-shadow: inset 0 0 10px rgba(255, 0, 255, 0.1);
-        }
+        .info-box.vpn { border-color: var(--cyan); color: var(--cyan); }
+        .info-box.rerouting { border-color: #FF00FF; color: #FF00FF; }
 
         .info-title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 900;
             text-transform: uppercase;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
+            margin-bottom: 4px;
         }
 
         .info-desc {
-            font-size: 12px;
+            font-size: 10px;
             opacity: 0.7;
-            line-height: 1.4;
-        }
-
-        /* Controls Hint */
-        .controls-hint {
-            opacity: 0.5;
-            font-size: 11px;
-            text-transform: uppercase;
-            text-align: center;
-            pointer-events: none;
-            font-family: monospace;
-            letter-spacing: 1px;
-            line-height: 1.6;
-            margin-top: 10px;
+            line-height: 1.2;
         }
 
         /* Game Over Specific */
         .game-over-title {
-            font-size: clamp(40px, 12vw, 80px);
+            font-size: clamp(32px, 10vw, 54px);
             font-weight: 900;
             color: #ff0055;
             text-transform: uppercase;
-            text-shadow: 0 0 30px rgba(255, 0, 85, 0.6);
-            margin: 0;
-            text-align: center;
+            text-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+            margin-top: auto;
+        }
+
+        .mini-leaderboard {
+            width: 100%;
+            max-width: 300px;
+            margin: 15px 0;
+            font-size: 12px;
         }
 
         .final-stats {
@@ -422,43 +504,61 @@
             <!-- Start Screen -->
             <div id="start-screen" class="overlay active">
                 <div class="logo-group">
-                    <svg class="chip-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+                    <svg class="chip-icon" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
                     <h1 class="logo">RentGen Runner</h1>
+                </div>
+
+                <div class="btn-group">
+                    <button id="start-btn" class="btn-ui btn-primary">Start Game</button>
+                    <button id="leaderboard-btn" class="btn-ui btn-secondary">Leaderboard</button>
+                    <button id="music-btn" class="btn-ui btn-accent">Music: ON</button>
                 </div>
 
                 <div class="info-row">
                     <div class="info-box vpn">
                         <div class="info-title">RentGen VPN</div>
-                        <div class="info-desc">Collect nodes for temporary protection</div>
+                        <div class="info-desc">Nodes for protection</div>
                     </div>
                     <div class="info-box rerouting">
                         <div class="info-title">Rerouting</div>
-                        <div class="info-desc">Wires swap lanes dynamically</div>
+                        <div class="info-desc">Wires swap lanes</div>
                     </div>
                 </div>
-                
-                <button id="start-game-btn" class="btn-primary">Start Game</button>
+            </div>
 
-                <div class="controls-hint">
-                    [A][D] Navigate<br>
-                    [Swipe/Tap] Touch Controls
+            <!-- Leaderboard Screen -->
+            <div id="leaderboard-overlay" class="overlay">
+                <h2 class="logo" style="font-size: 32px; color: #FF00FF; text-shadow: 0 0 15px rgba(255,0,255,0.5); margin-top: auto;">Top 10 Nodes</h2>
+                
+                <div class="leaderboard-container" id="leaderboard-list">
+                    <!-- Rows injected by JS -->
                 </div>
+
+                <div class="your-best" id="your-best-score">Your Best: 0</div>
+
+                <button id="back-to-menu-btn" class="btn-ui btn-secondary" style="margin-top: 10px; margin-bottom: auto;">Back to Menu</button>
             </div>
 
             <!-- Pause Screen -->
             <div id="pause-screen" class="overlay">
                 <h2 class="logo" style="font-size: 32px;">Paused</h2>
-                <button id="resume-btn" class="btn-primary">Resume</button>
+                <button id="resume-btn" class="btn-ui btn-primary">Resume</button>
             </div>
 
             <!-- Game Over Screen -->
             <div id="game-over-screen" class="overlay">
-                <h2 class="game-over-title">Game Over</h2>
-                <div class="final-stats">
-                    Throughput: <span id="final-score">0</span><br>
-                    Peak Rate: <span id="final-high-score">0</span>
+                <h2 class="game-over-title">Connection Lost</h2>
+                
+                <div class="leaderboard-container mini-leaderboard" id="mini-leaderboard-list">
+                    <!-- Top 5 injected by JS -->
                 </div>
-                <button id="restart-btn" class="btn-primary">Retry</button>
+
+                <div class="your-best" id="game-over-best" style="font-size: 14px; margin-top: 5px;">Your Best: 0</div>
+
+                <div class="btn-group" style="margin-top: 10px; margin-bottom: auto;">
+                    <button id="restart-btn" class="btn-ui btn-primary">Retry</button>
+                    <button id="main-menu-btn" class="btn-ui btn-secondary">Main Menu</button>
+                </div>
             </div>
         </div>
     </div>

@@ -2,6 +2,30 @@
  * RentGen Runner - Vanilla JS Implementation
  */
 
+// --- Firebase & Telegram Setup ---
+const firebaseConfig = {
+  apiKey: "__FIREBASE_API_KEY__",
+  authDomain: "__FIREBASE_AUTH_DOMAIN__",
+  databaseURL: "__FIREBASE_DATABASE_URL__",
+  projectId: "__FIREBASE_PROJECT_ID__",
+  storageBucket: "__FIREBASE_STORAGE_BUCKET__",
+  messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
+  appId: "__FIREBASE_APP_ID__"
+};
+
+// Initialize Firebase (Compat)
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Telegram WebApp
+const tg = window.Telegram?.WebApp;
+if (tg) {
+    tg.expand();
+    tg.ready();
+}
+const playerName = tg?.initDataUnsafe?.user?.first_name || tg?.initDataUnsafe?.user?.username || "ANON_PACKET";
+const playerUid = tg?.initDataUnsafe?.user?.id?.toString() || "ANON_" + Math.floor(Math.random() * 1000000);
+
 // --- Audio Engine ---
 class SynthEngine {
     constructor() {
@@ -341,11 +365,28 @@ const startScreen = document.getElementById('start-screen');
 const pauseScreen = document.getElementById('pause-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const menuOverlay = document.getElementById('menu-overlay');
+const leaderboardScreen = document.getElementById('leaderboard-overlay');
+const leaderboardList = document.getElementById('leaderboard-list');
+const miniLeaderboardList = document.getElementById('mini-leaderboard-list');
+const yourBestScore = document.getElementById('your-best-score');
+const gameOverBest = document.getElementById('game-over-best');
+const musicToggleBtn = document.getElementById('music-btn');
 const finalScore = document.getElementById('final-score');
 const finalHighScore = document.getElementById('final-high-score');
 const muteBtn = document.getElementById('mute-btn');
 const volOn = document.getElementById('vol-on');
 const volOff = document.getElementById('vol-off');
+
+// --- Global Error Handling ---
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error("Global Error:", message, "at", source, lineno, colno);
+    // You could show a UI toast here if needed
+    return false;
+};
+
+window.onunhandledrejection = function(event) {
+    console.error("Unhandled Promise Rejection:", event.reason);
+};
 
 // --- Helper Functions ---
 function createDust(randomY = false) {
@@ -408,6 +449,76 @@ function getWireX(wireIdx, y, w, time, h) {
 }
 
 // --- UI Management ---
+async function loadLeaderboard() {
+    try {
+        const snapshot = await db.collection('leaderboard')
+            .orderBy('score', 'desc')
+            .limit(10)
+            .get();
+        
+        const leaderboardData = [];
+        snapshot.forEach(doc => {
+            leaderboardData.push(doc.data());
+        });
+        return leaderboardData;
+    } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+        return [];
+    }
+}
+
+async function saveGlobalScore(finalScore) {
+    if (finalScore <= 0) return;
+    try {
+        await db.collection('leaderboard').add({
+            name: playerName,
+            score: Math.floor(finalScore),
+            uid: playerUid,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Score saved successfully!");
+    } catch (error) {
+        console.error("Error saving score:", error);
+    }
+}
+
+async function populateLeaderboard(container, limit = 10) {
+    container.innerHTML = `
+        <div class="leaderboard-row header">
+            <span class="rank">#</span>
+            <span class="name">NODE ID</span>
+            <span class="score">THROUGHPUT</span>
+        </div>
+        <div style="padding: 10px; opacity: 0.5; font-size: 12px;">Syncing with network...</div>
+    `;
+    
+    const data = await loadLeaderboard();
+    
+    container.innerHTML = `
+        <div class="leaderboard-row header">
+            <span class="rank">#</span>
+            <span class="name">NODE ID</span>
+            <span class="score">THROUGHPUT</span>
+        </div>
+    `;
+
+    if (data.length === 0) {
+        container.innerHTML += `<div style="padding: 10px; opacity: 0.5; font-size: 12px;">No data found.</div>`;
+    }
+
+    data.slice(0, limit).forEach((entry, i) => {
+        const row = document.createElement('div');
+        row.className = 'leaderboard-row';
+        if (entry.uid === playerUid) row.style.color = "#FF00FF";
+        row.innerHTML = `
+            <span class="rank">${i + 1}</span>
+            <span class="name">${entry.name}</span>
+            <span class="score">${entry.score}</span>
+        `;
+        container.appendChild(row);
+    });
+}
+
 function updateUI() {
     scoreVal.textContent = Math.floor(game.score);
     levelVal.textContent = `Lv.${game.level}`;
@@ -421,24 +532,59 @@ function updateUI() {
         startScreen.classList.remove('active');
         pauseScreen.classList.remove('active');
         gameOverScreen.classList.remove('active');
+        leaderboardScreen.classList.remove('active');
     } else {
         menuOverlay.classList.add('active');
         if (gameState === 'START') {
             startScreen.classList.add('active');
             pauseScreen.classList.remove('active');
             gameOverScreen.classList.remove('active');
+            leaderboardScreen.classList.remove('active');
         } else if (gameState === 'PAUSED') {
             startScreen.classList.remove('active');
             pauseScreen.classList.add('active');
             gameOverScreen.classList.remove('active');
+            leaderboardScreen.classList.remove('active');
         } else if (gameState === 'GAMEOVER') {
             startScreen.classList.remove('active');
             pauseScreen.classList.remove('active');
             gameOverScreen.classList.add('active');
-            finalScore.textContent = Math.floor(game.score);
-            finalHighScore.textContent = highScore;
+            leaderboardScreen.classList.remove('active');
+            
+            populateLeaderboard(miniLeaderboardList, 5);
+            gameOverBest.textContent = `Your Best: ${highScore}`;
+        } else if (gameState === 'LEADERBOARD') {
+            startScreen.classList.remove('active');
+            pauseScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            leaderboardScreen.classList.add('active');
+            
+            populateLeaderboard(leaderboardList, 10);
+            yourBestScore.textContent = `Your Best: ${highScore}`;
         }
     }
+}
+
+function showLeaderboard() {
+    gameState = 'LEADERBOARD';
+    updateUI();
+}
+
+function hideLeaderboard() {
+    gameState = 'START';
+    updateUI();
+}
+
+function toggleMusic() {
+    isMuted = !isMuted;
+    audio.setVolume(isMuted ? 0 : 0.15);
+    updateMuteUI();
+}
+
+function updateMuteUI() {
+    if (musicToggleBtn) musicToggleBtn.textContent = `Music: ${isMuted ? 'OFF' : 'ON'}`;
+    if (volOn) volOn.style.display = isMuted ? 'none' : 'block';
+    if (volOff) volOff.style.display = isMuted ? 'block' : 'none';
 }
 
 // --- Game Logic ---
@@ -484,10 +630,7 @@ function togglePause() {
 }
 
 function toggleMute() {
-    isMuted = !isMuted;
-    audio.setVolume(isMuted ? 0 : 0.15);
-    volOn.style.display = isMuted ? 'none' : 'block';
-    volOff.style.display = isMuted ? 'block' : 'none';
+    toggleMusic();
 }
 
 function update(dt) {
@@ -605,10 +748,12 @@ function update(dt) {
                     game.glitchTimer = 30;
                     gameState = 'GAMEOVER';
                     audio.playGameOver();
-                    if (game.score > highScore) {
-                        highScore = Math.floor(game.score);
+                    const finalScoreVal = Math.floor(game.score);
+                    if (finalScoreVal > highScore) {
+                        highScore = finalScoreVal;
                         localStorage.setItem('rentgen_highscore', highScore);
                     }
+                    saveGlobalScore(finalScoreVal);
                     updateUI();
                     return false;
                 }
@@ -879,16 +1024,24 @@ window.addEventListener('touchend', (e) => {
 });
 
 // --- Event Listeners ---
-document.getElementById('start-game-btn').addEventListener('click', resetGame);
+document.getElementById('start-btn').addEventListener('click', resetGame);
 document.getElementById('restart-btn').addEventListener('click', resetGame);
 document.getElementById('resume-btn').addEventListener('click', togglePause);
 document.getElementById('pause-btn').addEventListener('click', togglePause);
 document.getElementById('mute-btn').addEventListener('click', toggleMute);
+document.getElementById('leaderboard-btn').addEventListener('click', showLeaderboard);
+document.getElementById('back-to-menu-btn').addEventListener('click', hideLeaderboard);
+document.getElementById('main-menu-btn').addEventListener('click', () => {
+    gameState = 'START';
+    updateUI();
+});
+document.getElementById('music-btn').addEventListener('click', toggleMusic);
 
 window.addEventListener('resize', resize);
 
 // --- Init ---
 resize();
+updateMuteUI();
 updateUI();
 game.lastTime = performance.now();
 requestAnimationFrame(loop);
