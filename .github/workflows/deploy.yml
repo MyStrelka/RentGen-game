@@ -45,6 +45,19 @@ EOF
           fi
           echo "✅ firebase-config.js looks good"
 
+      - name: Validate generated file exists
+        run: |
+          echo "🧪 ls workspace"
+          ls -la
+          echo "🧪 check firebase-config.js"
+          if [ ! -f firebase-config.js ]; then
+            echo "❌ firebase-config.js not found after generation"
+            exit 1
+          fi
+          echo "✅ firebase-config.js is present"
+          echo "🧪 content snippet"
+          sed -n '1,20p' firebase-config.js
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
