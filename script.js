@@ -467,13 +467,18 @@ async function loadLeaderboard() {
         return [];
     }
     try {
-        const snapshot = await database.ref('leaderboard').orderByChild('score').limitToLast(10).once('value');
+        const snapshot = await database.ref('leaderboard').once('value');
         const leaderboardData = [];
         snapshot.forEach(childSnapshot => {
-            leaderboardData.push(childSnapshot.val());
+            const entry = childSnapshot.val();
+            if (entry && typeof entry.score === 'number') {
+                leaderboardData.push(entry);
+            }
         });
-        // Realtime Database returns data in ascending order when using limitToLast
-        return leaderboardData.reverse();
+        // Sort by score descending (highest first)
+        leaderboardData.sort((a, b) => b.score - a.score);
+        // Return top 10
+        return leaderboardData.slice(0, 10);
     } catch (error) {
         console.error("Error fetching leaderboard:", error);
         return [];
