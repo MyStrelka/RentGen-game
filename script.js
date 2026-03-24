@@ -3,7 +3,7 @@
  */
 
 // --- Firebase & Telegram Setup ---
-const firebaseConfig = {
+const defaultFirebaseConfig = {
   apiKey: "__FIREBASE_API_KEY__",
   authDomain: "__FIREBASE_AUTH_DOMAIN__",
   databaseURL: "__FIREBASE_DATABASE_URL__",
@@ -13,12 +13,18 @@ const firebaseConfig = {
   appId: "__FIREBASE_APP_ID__"
 };
 
+const firebaseConfig = window.firebaseConfig || defaultFirebaseConfig;
+
+const isPlaceholder = (val) => typeof val === 'string' && val.includes('__FIREBASE');
+const isConfigValid = Object.values(firebaseConfig).every(v => typeof v === 'string' && v && !isPlaceholder(v));
+
 // --- Diagnostic logging ---
 console.log("🔍 Firebase Config Check:");
-console.log("apiKey:", firebaseConfig.apiKey.substring(0, 10) + "...");
+console.log("apiKey:", (firebaseConfig.apiKey || "").substring(0, 10) + "...");
 console.log("authDomain:", firebaseConfig.authDomain);
 console.log("databaseURL:", firebaseConfig.databaseURL);
 console.log("projectId:", firebaseConfig.projectId);
+console.log("✓ Config is valid?", isConfigValid);
 
 const isConfigValid = !firebaseConfig.databaseURL.includes("__FIREBASE");
 console.log("✓ Config is valid?", isConfigValid);
@@ -27,15 +33,14 @@ console.log("✓ Config is valid?", isConfigValid);
 let database = null;
 try {
     if (typeof firebase !== 'undefined') {
-        if (!firebaseConfig.databaseURL || firebaseConfig.databaseURL.includes("__FIREBASE") || firebaseConfig.databaseURL.trim() === "") {
-            console.error("⚠️ Firebase config contains placeholders - Secrets were NOT injected!");
-            console.error("This means GitHub Actions didn't replace the tokens properly.");
-            // Fallback for local development to prevent crash
-            firebaseConfig.databaseURL = "https://your-firebase-project.firebaseio.com";
+        if (!isConfigValid) {
+            console.error("⚠️ Firebase config contains placeholders or is invalid - Secrets were NOT injected!");
+            console.error("This means GitHub Actions didn't replace the tokens properly, or firebase-config.js is missing.");
+        } else {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            console.log("✓ Firebase initialized successfully");
         }
-        firebase.initializeApp(firebaseConfig);
-        database = firebase.database();
-        console.log("✓ Firebase initialized successfully");
     } else {
         console.warn("Firebase SDK not loaded");
     }

@@ -17,29 +17,34 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      - name: Replace Tokens
+      - name: Generate Firebase config file
         run: |
-          echo "🔍 Checking secrets availability..."
-          if [ -z "${{ secrets.FIREBASE_API_KEY }}" ]; then
-            echo "❌ FIREBASE_API_KEY secret is not set!"
+          echo "🔐 Generate firebase-config.js with secrets"
+          if [ -z "${{ secrets.FIREBASE_API_KEY }}" ] || [ -z "${{ secrets.FIREBASE_AUTH_DOMAIN }}" ] || [ -z "${{ secrets.FIREBASE_DATABASE_URL }}" ] || [ -z "${{ secrets.FIREBASE_PROJECT_ID }}" ] || [ -z "${{ secrets.FIREBASE_STORAGE_BUCKET }}" ] || [ -z "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}" ] || [ -z "${{ secrets.FIREBASE_APP_ID }}" ]; then
+            echo "❌ One or more Firebase secrets are missing"
             exit 1
           fi
-          echo "✅ Secrets are available, replacing tokens..."
-          sed -i "s|__FIREBASE_API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" script.js
-          sed -i "s|__FIREBASE_AUTH_DOMAIN__|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" script.js
-          sed -i "s|__FIREBASE_DATABASE_URL__|${{ secrets.FIREBASE_DATABASE_URL }}|g" script.js
-          sed -i "s|__FIREBASE_PROJECT_ID__|${{ secrets.FIREBASE_PROJECT_ID }}|g" script.js
-          sed -i "s|__FIREBASE_STORAGE_BUCKET__|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" script.js
-          sed -i "s|__FIREBASE_MESSAGING_SENDER_ID__|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" script.js
-          sed -i "s|__FIREBASE_APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" script.js
-          echo "✅ Token replacement completed"
-          # Verify replacement worked
-          if grep -q "__FIREBASE_API_KEY__" script.js; then
-            echo "❌ ERROR: Token replacement failed!"
+          cat > firebase-config.js << 'EOF'
+window.firebaseConfig = {
+  apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+  authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
+  databaseURL: "${{ secrets.FIREBASE_DATABASE_URL }}",
+  projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+  storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
+  messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+  appId: "${{ secrets.FIREBASE_APP_ID }}"
+};
+EOF
+          echo "✅ Created firebase-config.js"
+          echo "🔍 Debug output (first lines):"
+          head -n 20 firebase-config.js
+          echo "🔍 Verify placeholders are not in firebase-config.js"
+          if grep -E "__FIREBASE_(API_KEY|AUTH_DOMAIN|DATABASE_URL|PROJECT_ID|STORAGE_BUCKET|MESSAGING_SENDER_ID|APP_ID)__" firebase-config.js; then
+            echo "❌ Placeholder value found in created firebase-config.js"
             exit 1
-          else
-            echo "✅ Token replacement verified"
           fi
+          echo "✅ firebase-config.js looks good"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
