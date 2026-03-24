@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Project specific
+script.download.js
+test-secrets.sh

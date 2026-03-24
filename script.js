@@ -3,35 +3,33 @@
  */
 
 // --- Firebase & Telegram Setup ---
-const defaultFirebaseConfig = {
-  apiKey: "__FIREBASE_API_KEY__",
-  authDomain: "__FIREBASE_AUTH_DOMAIN__",
-  databaseURL: "__FIREBASE_DATABASE_URL__",
-  projectId: "__FIREBASE_PROJECT_ID__",
-  storageBucket: "__FIREBASE_STORAGE_BUCKET__",
-  messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
-  appId: "__FIREBASE_APP_ID__"
-};
-
-const firebaseConfig = window.firebaseConfig || defaultFirebaseConfig;
-
+// Source of truth: window.firebaseConfig injected during deploy.
 const isPlaceholder = (val) => typeof val === 'string' && val.includes('__FIREBASE');
-const isConfigValid = Object.values(firebaseConfig).every(v => typeof v === 'string' && v && !isPlaceholder(v));
+
+const firebaseConfig = (window.firebaseConfig && Object.values(window.firebaseConfig).every(v => typeof v === 'string' && v && !isPlaceholder(v)))
+    ? window.firebaseConfig
+    : null;
+
+const isConfigValid = Boolean(firebaseConfig);
 
 // --- Diagnostic logging ---
 console.log("🔍 Firebase Config Check:");
-console.log("apiKey:", (firebaseConfig.apiKey || "").substring(0, 10) + "...");
-console.log("authDomain:", firebaseConfig.authDomain);
-console.log("databaseURL:", firebaseConfig.databaseURL);
-console.log("projectId:", firebaseConfig.projectId);
+if (!firebaseConfig) {
+    console.error("⚠️ Firebase config is missing or contains placeholders. Check GitHub Actions secrets or index.html injection.");
+} else {
+    console.log("apiKey:", (firebaseConfig.apiKey || "").substring(0, 10) + "...");
+    console.log("authDomain:", firebaseConfig.authDomain);
+    console.log("databaseURL:", firebaseConfig.databaseURL);
+    console.log("projectId:", firebaseConfig.projectId);
+}
 
 // Initialize Firebase (Compat)
 let database = null;
 try {
     if (typeof firebase !== 'undefined') {
         if (!isConfigValid) {
-            console.error("⚠️ Firebase config contains placeholders or is invalid - Secrets were NOT injected!");
-            console.error("This means GitHub Actions didn't replace the tokens properly, or firebase-config.js is missing.");
+            console.error("⚠️ Firebase config not set or invalid. Skipping Firebase init.");
+            console.error("Deploy-time replacement has failed or index.html still has placeholders.");
         } else {
             firebase.initializeApp(firebaseConfig);
             database = firebase.database();
@@ -478,7 +476,7 @@ function getWireX(wireIdx, y, w, time, h) {
 // --- UI Management ---
 async function loadLeaderboard() {
     console.log("📊 loadLeaderboard() called");
-    
+
     if (!database) {
         console.error("❌ Database is NULL - Firebase not initialized properly");
         console.error("firebaseConfig:", {
@@ -487,16 +485,16 @@ async function loadLeaderboard() {
         });
         return [];
     }
-    
+
     console.log("✓ Database reference exists:", database);
-    
+
     try {
         console.log("🔄 Fetching from /leaderboard...");
         const snapshot = await database.ref('leaderboard').once('value');
-        
+
         console.log("✓ Got snapshot:", snapshot);
         console.log("✓ Snapshot exists:", snapshot.exists());
-        
+
         const leaderboardData = [];
         snapshot.forEach(childSnapshot => {
             const entry = childSnapshot.val();
@@ -505,46 +503,46 @@ async function loadLeaderboard() {
                 console.log("✓ Added entry:", entry.name, entry.score);
             }
         });
-        
+
         console.log("✓ Total entries fetched:", leaderboardData.length);
-        
+
         // Sort by score descending (highest first)
         leaderboardData.sort((a, b) => b.score - a.score);
-        
+
         const result = leaderboardData.slice(0, 10);
         console.log("✓ Returning top 10:", result.length);
-        
+
         return result;
     } catch (error) {
         console.error("❌ Error fetching leaderboard:", error);
         console.error("Error code:", error.code);
         console.error("Error message:", error.message);
         console.error("Full error:", error);
-        
+
         // Log which exact path failed
         if (error.code === 'PERMISSION_DENIED') {
             console.error("🔐 PERMISSION DENIED - Check Firebase Rules:");
             console.error("   Expected rule: .read: true");
             console.error("   At path: /leaderboard");
         }
-        
+
         return [];
     }
 }
 
 async function saveGlobalScore(finalScore) {
     console.log("💾 saveGlobalScore() called with score:", finalScore);
-    
+
     if (finalScore <= 0) {
         console.warn("Score is 0 or negative, skipping save");
         return;
     }
-    
+
     if (!database) {
         console.error("❌ Database is NULL - cannot save score");
         return;
     }
-    
+
     try {
         console.log("🔄 Pushing to /leaderboard...");
         await database.ref('leaderboard').push({
@@ -557,7 +555,7 @@ async function saveGlobalScore(finalScore) {
     } catch (error) {
         console.error("❌ Error saving score:", error);
         console.error("Error code:", error.code);
-        
+
         if (error.code === 'PERMISSION_DENIED') {
             console.error("🔐 PERMISSION DENIED when writing - Check Firebase Rules:");
             console.error("   Expected rule: .write: true or custom validation");
