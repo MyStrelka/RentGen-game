@@ -24,10 +24,6 @@ console.log("apiKey:", (firebaseConfig.apiKey || "").substring(0, 10) + "...");
 console.log("authDomain:", firebaseConfig.authDomain);
 console.log("databaseURL:", firebaseConfig.databaseURL);
 console.log("projectId:", firebaseConfig.projectId);
-console.log("✓ Config is valid?", isConfigValid);
-
-const isConfigValid = !firebaseConfig.databaseURL.includes("__FIREBASE");
-console.log("✓ Config is valid?", isConfigValid);
 
 // Initialize Firebase (Compat)
 let database = null;
