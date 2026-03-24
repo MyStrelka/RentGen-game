@@ -15,7 +15,7 @@ const firebaseConfig = {
 
 // Initialize Firebase (Compat)
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const database = firebase.database();
 
 // Telegram WebApp
 const tg = window.Telegram?.WebApp;
@@ -451,16 +451,13 @@ function getWireX(wireIdx, y, w, time, h) {
 // --- UI Management ---
 async function loadLeaderboard() {
     try {
-        const snapshot = await db.collection('leaderboard')
-            .orderBy('score', 'desc')
-            .limit(10)
-            .get();
-        
+        const snapshot = await database.ref('leaderboard').orderByChild('score').limitToLast(10).once('value');
         const leaderboardData = [];
-        snapshot.forEach(doc => {
-            leaderboardData.push(doc.data());
+        snapshot.forEach(childSnapshot => {
+            leaderboardData.push(childSnapshot.val());
         });
-        return leaderboardData;
+        // Realtime Database returns data in ascending order when using limitToLast
+        return leaderboardData.reverse();
     } catch (error) {
         console.error("Error fetching leaderboard:", error);
         return [];
@@ -470,11 +467,11 @@ async function loadLeaderboard() {
 async function saveGlobalScore(finalScore) {
     if (finalScore <= 0) return;
     try {
-        await db.collection('leaderboard').add({
+        await database.ref('leaderboard').push({
             name: playerName,
             score: Math.floor(finalScore),
             uid: playerUid,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         });
         console.log("Score saved successfully!");
     } catch (error) {
